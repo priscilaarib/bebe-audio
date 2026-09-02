@@ -1294,90 +1294,101 @@ const Sound = {
 
   async unlock() {
 
-    if (!this.ctx) {
+  try {
 
-      const AudioContextClass =
-        window.AudioContext ||
-        window.webkitAudioContext;
+    const AudioContextClass =
+      window.AudioContext ||
+      window.webkitAudioContext;
 
-      if (!AudioContextClass) {
-        console.warn('Web Audio não disponível neste navegador.');
-        return false;
-      }
-
-      try {
-
-        this.ctx = new AudioContextClass();
-
-        this.master = this.ctx.createGain();
-
-        this.master.gain.value = 0.22;
-
-        this.master.connect(
-          this.ctx.destination
-        );
-
-      } catch (error) {
-
-        console.error(
-          'Erro criando AudioContext:',
-          error
-        );
-
-        return false;
-      }
-    }
-
-    try {
-
-      /*
-       * MUITO IMPORTANTE:
-       * resume() acontece durante o toque
-       * do usuário.
-       */
-      if (this.ctx.state !== 'running') {
-        await this.ctx.resume();
-      }
-
-      /*
-       * Pequeno sinal de desbloqueio.
-       */
-      const osc =
-        this.ctx.createOscillator();
-
-      const gain =
-        this.ctx.createGain();
-
-      gain.gain.value = 0.00001;
-
-      osc.connect(gain);
-      gain.connect(this.master);
-
-      osc.start();
-
-      osc.stop(
-        this.ctx.currentTime + 0.05
-      );
-
-      this.unlocked = true;
-
-      console.log(
-        'Áudio desbloqueado:',
-        this.ctx.state
-      );
-
-      return true;
-
-    } catch (error) {
-
-      console.error(
-        'Erro desbloqueando áudio:',
-        error
-      );
-
+    if (!AudioContextClass) {
+      console.error('Web Audio API não disponível.');
       return false;
     }
-  },
+
+    /*
+     * Cria o contexto uma única vez.
+     */
+    if (!this.ctx) {
+
+      this.ctx =
+        new AudioContextClass();
+
+      this.master =
+        this.ctx.createGain();
+
+      this.master.gain.value = 0.22;
+
+      this.master.connect(
+        this.ctx.destination
+      );
+    }
+
+    /*
+     * MUITO IMPORTANTE:
+     * resume acontece diretamente no evento
+     * de toque do usuário.
+     */
+    if (this.ctx.state !== 'running') {
+      await this.ctx.resume();
+    }
+
+    /*
+     * Cria um som REAL, porém extremamente baixo.
+     * Isso ajuda Safari/iOS e alguns Androids a
+     * considerar o contexto de áudio como utilizado.
+     */
+    const osc =
+      this.ctx.createOscillator();
+
+    const gain =
+      this.ctx.createGain();
+
+    osc.type = 'sine';
+
+    osc.frequency.value = 440;
+
+    gain.gain.setValueAtTime(
+      0.00001,
+      this.ctx.currentTime
+    );
+
+    osc.connect(gain);
+    gain.connect(this.master);
+
+    osc.start(
+      this.ctx.currentTime
+    );
+
+    osc.stop(
+      this.ctx.currentTime + 0.1
+    );
+
+    /*
+     * Segunda chamada ao resume.
+     */
+    await this.ctx.resume();
+
+    this.unlocked =
+      this.ctx.state === 'running';
+
+    console.log(
+      'AudioContext:',
+      this.ctx.state
+    );
+
+    return this.unlocked;
+
+  } catch (error) {
+
+    console.error(
+      'ERRO DE ÁUDIO:',
+      error
+    );
+
+    return false;
+  }
+}
+
 
 
   async resume() {
@@ -1850,8 +1861,7 @@ document.getElementById('sound-toggle')
 
       const unlocked =
         await Sound.unlock();
-        Sound.playPop();
-
+    
       if (unlocked) {
         Sound.setMuted(false);
         button.textContent = '🔈';
@@ -1951,7 +1961,20 @@ startBtn.addEventListener('click', async () => {
     return;
   }
 
-  await Sound.unlock();
+  const audioOK =
+    await Sound.unlock();
+
+  console.log(
+    'Áudio liberado:',
+    audioOK
+  );
+
+  if (Sound.ctx) {
+    console.log(
+      'Estado:',
+      Sound.ctx.state
+    );
+  }
 
   visitorName = typedName;
 
@@ -1961,6 +1984,7 @@ startBtn.addEventListener('click', async () => {
   showScreen('screen-greeting');
 
 });
+
 
 
 let answers = [];
