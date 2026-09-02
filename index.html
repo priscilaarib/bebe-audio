@@ -1292,69 +1292,63 @@ const Sound = {
   muted: false,
   unlocked: false,
 
-  async init() {
+  async unlock() {
 
     if (!this.ctx) {
 
       const AudioContextClass =
-        window.AudioContext || window.webkitAudioContext;
+        window.AudioContext ||
+        window.webkitAudioContext;
 
       if (!AudioContextClass) {
-        console.warn('Web Audio API não disponível.');
+        console.warn('Web Audio não disponível neste navegador.');
         return false;
       }
 
       try {
+
         this.ctx = new AudioContextClass();
 
         this.master = this.ctx.createGain();
 
-        this.master.gain.value =
-          this.muted ? 0 : 0.22;
+        this.master.gain.value = 0.22;
 
-        this.master.connect(this.ctx.destination);
+        this.master.connect(
+          this.ctx.destination
+        );
 
       } catch (error) {
-        console.warn('Erro ao criar AudioContext:', error);
+
+        console.error(
+          'Erro criando AudioContext:',
+          error
+        );
+
         return false;
       }
-    }
-
-    if (this.ctx.state === 'suspended') {
-      try {
-        await this.ctx.resume();
-      } catch (error) {
-        console.warn('Não foi possível ativar o áudio:', error);
-        return false;
-      }
-    }
-
-    return this.ctx.state === 'running';
-  },
-
-
-  async unlock() {
-
-    const ready = await this.init();
-
-    if (!ready || !this.ctx) {
-      return false;
     }
 
     try {
 
       /*
-       * Som praticamente inaudível usado para
-       * desbloquear o áudio nos celulares.
+       * MUITO IMPORTANTE:
+       * resume() acontece durante o toque
+       * do usuário.
        */
+      if (this.ctx.state !== 'running') {
+        await this.ctx.resume();
+      }
 
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
+      /*
+       * Pequeno sinal de desbloqueio.
+       */
+      const osc =
+        this.ctx.createOscillator();
 
-      gain.gain.setValueAtTime(
-        0.00001,
-        this.ctx.currentTime
-      );
+      const gain =
+        this.ctx.createGain();
+
+      gain.gain.value = 0.00001;
 
       osc.connect(gain);
       gain.connect(this.master);
@@ -1365,16 +1359,19 @@ const Sound = {
         this.ctx.currentTime + 0.05
       );
 
-      await this.ctx.resume();
-
       this.unlocked = true;
+
+      console.log(
+        'Áudio desbloqueado:',
+        this.ctx.state
+      );
 
       return true;
 
     } catch (error) {
 
-      console.warn(
-        'Falha ao desbloquear áudio:',
+      console.error(
+        'Erro desbloqueando áudio:',
         error
       );
 
@@ -1386,78 +1383,108 @@ const Sound = {
   async resume() {
 
     if (!this.ctx) {
-      return this.unlock();
+      return false;
     }
 
-    if (this.ctx.state === 'suspended') {
+    try {
 
-      try {
+      if (this.ctx.state !== 'running') {
         await this.ctx.resume();
-      } catch (error) {
-        console.warn(
-          'Erro ao retomar áudio:',
-          error
-        );
-
-        return false;
       }
-    }
 
-    return this.ctx.state === 'running';
-  },
+      return this.ctx.state === 'running';
 
+    } catch (error) {
 
-  setMuted(m) {
+      console.warn(
+        'Não foi possível retomar áudio:',
+        error
+      );
 
-    this.muted = m;
-
-    if (this.master) {
-      this.master.gain.value =
-        m ? 0 : 0.22;
+      return false;
     }
   },
 
 
-  async playPop() {
+  setMuted(value) {
 
-    const ready = await this.resume();
+    this.muted = value;
 
-    if (!ready || !this.ctx || !this.master) {
+    if (this.master && this.ctx) {
+
+      this.master.gain.cancelScheduledValues(
+        this.ctx.currentTime
+      );
+
+      this.master.gain.setTargetAtTime(
+        value ? 0 : 0.22,
+        this.ctx.currentTime,
+        0.01
+      );
+    }
+  },
+
+
+  playPop() {
+
+    if (
+      !this.ctx ||
+      !this.master ||
+      this.ctx.state !== 'running' ||
+      this.muted
+    ) {
       return;
     }
 
     const t = this.ctx.currentTime;
 
-    const size = Math.floor(
-      this.ctx.sampleRate * 0.14
-    );
 
-    const buf = this.ctx.createBuffer(
-      1,
-      size,
-      this.ctx.sampleRate
-    );
+    /*
+     * ESTOURO
+     */
 
-    const data = buf.getChannelData(0);
+    const duration = 0.16;
 
-    for (let i = 0; i < size; i++) {
+    const buffer =
+      this.ctx.createBuffer(
+        1,
+        Math.floor(
+          this.ctx.sampleRate * duration
+        ),
+        this.ctx.sampleRate
+      );
+
+    const data =
+      buffer.getChannelData(0);
+
+    for (
+      let i = 0;
+      i < data.length;
+      i++
+    ) {
+
+      const envelope =
+        Math.pow(
+          1 - i / data.length,
+          2
+        );
 
       data[i] =
         (Math.random() * 2 - 1) *
-        Math.pow(1 - i / size, 2);
+        envelope;
     }
 
     const noise =
       this.ctx.createBufferSource();
 
-    noise.buffer = buf;
+    noise.buffer = buffer;
 
     const filter =
       this.ctx.createBiquadFilter();
 
     filter.type = 'bandpass';
-    filter.frequency.value = 1500;
-    filter.Q.value = 0.8;
+    filter.frequency.value = 1700;
+    filter.Q.value = 0.7;
 
     const gain =
       this.ctx.createGain();
@@ -1468,13 +1495,200 @@ const Sound = {
     );
 
     gain.gain.exponentialRampToValueAtTime(
-      0.85,
-      t + 0.008
+      0.8,
+      t + 0.006
     );
 
     gain.gain.exponentialRampToValueAtTime(
       0.001,
-      t + 0.14
+      t + duration
+    );
+
+    noise
+      .connect(filter);
+
+    filter
+      .connect(gain);
+
+    gain
+      .connect(this.master);
+
+    noise.start(t);
+
+    noise.stop(
+      t + duration
+    );
+  },
+
+
+  playWrongPop() {
+
+    if (
+      !this.ctx ||
+      !this.master ||
+      this.ctx.state !== 'running' ||
+      this.muted
+    ) {
+      return;
+    }
+
+    const t =
+      this.ctx.currentTime;
+
+    const osc =
+      this.ctx.createOscillator();
+
+    const gain =
+      this.ctx.createGain();
+
+    osc.type = 'sine';
+
+    osc.frequency.setValueAtTime(
+      360,
+      t
+    );
+
+    osc.frequency.exponentialRampToValueAtTime(
+      100,
+      t + 0.25
+    );
+
+    gain.gain.setValueAtTime(
+      0.0001,
+      t
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+      0.25,
+      t + 0.02
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+      0.001,
+      t + 0.25
+    );
+
+    osc.connect(gain);
+    gain.connect(this.master);
+
+    osc.start(t);
+    osc.stop(t + 0.27);
+  },
+
+
+  playBigPop() {
+
+    if (
+      !this.ctx ||
+      !this.master ||
+      this.ctx.state !== 'running' ||
+      this.muted
+    ) {
+      return;
+    }
+
+    const t =
+      this.ctx.currentTime;
+
+
+    /*
+     * GRAVE DO ESTOURO
+     */
+
+    const bass =
+      this.ctx.createOscillator();
+
+    const bassGain =
+      this.ctx.createGain();
+
+    bass.type = 'sine';
+
+    bass.frequency.setValueAtTime(
+      130,
+      t
+    );
+
+    bass.frequency.exponentialRampToValueAtTime(
+      38,
+      t + 0.45
+    );
+
+    bassGain.gain.setValueAtTime(
+      0.0001,
+      t
+    );
+
+    bassGain.gain.exponentialRampToValueAtTime(
+      0.9,
+      t + 0.01
+    );
+
+    bassGain.gain.exponentialRampToValueAtTime(
+      0.001,
+      t + 0.45
+    );
+
+    bass.connect(bassGain);
+    bassGain.connect(this.master);
+
+    bass.start(t);
+    bass.stop(t + 0.48);
+
+
+    /*
+     * ESTOURO AGUDO
+     */
+
+    const duration = 0.30;
+
+    const buffer =
+      this.ctx.createBuffer(
+        1,
+        Math.floor(
+          this.ctx.sampleRate * duration
+        ),
+        this.ctx.sampleRate
+      );
+
+    const data =
+      buffer.getChannelData(0);
+
+    for (
+      let i = 0;
+      i < data.length;
+      i++
+    ) {
+
+      data[i] =
+        (Math.random() * 2 - 1) *
+        Math.pow(
+          1 - i / data.length,
+          2
+        );
+    }
+
+    const noise =
+      this.ctx.createBufferSource();
+
+    noise.buffer = buffer;
+
+    const filter =
+      this.ctx.createBiquadFilter();
+
+    filter.type = 'highpass';
+    filter.frequency.value = 800;
+
+    const gain =
+      this.ctx.createGain();
+
+    gain.gain.setValueAtTime(
+      0.8,
+      t
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+      0.001,
+      t + duration
     );
 
     noise.connect(filter);
@@ -1482,265 +1696,134 @@ const Sound = {
     gain.connect(this.master);
 
     noise.start(t);
-    noise.stop(t + 0.15);
+
+    noise.stop(
+      t + duration
+    );
   },
 
 
-  async playWrongPop() {
+  playHeartbeat() {
 
-    const ready = await this.resume();
-
-    if (!ready || !this.ctx) {
+    if (
+      !this.ctx ||
+      !this.master ||
+      this.ctx.state !== 'running' ||
+      this.muted
+    ) {
       return;
     }
 
-    const t = this.ctx.currentTime;
+    const beats = [
+      0,
+      0.5,
+      1.4,
+      1.9,
+      2.8,
+      3.3
+    ];
 
-    const osc =
-      this.ctx.createOscillator();
+    beats.forEach(delay => {
 
-    const gain =
-      this.ctx.createGain();
+      const t =
+        this.ctx.currentTime + delay;
 
-    osc.type = 'sine';
+      const osc =
+        this.ctx.createOscillator();
 
-    osc.frequency.setValueAtTime(
-      380,
-      t
-    );
+      const gain =
+        this.ctx.createGain();
 
-    osc.frequency.exponentialRampToValueAtTime(
-      110,
-      t + 0.28
-    );
+      osc.type = 'sine';
 
-    gain.gain.setValueAtTime(
-      0.0001,
-      t
-    );
+      osc.frequency.value = 52;
 
-    gain.gain.exponentialRampToValueAtTime(
-      0.28,
-      t + 0.02
-    );
-
-    gain.gain.exponentialRampToValueAtTime(
-      0.001,
-      t + 0.28
-    );
-
-    osc.connect(gain);
-    gain.connect(this.master);
-
-    osc.start(t);
-    osc.stop(t + 0.3);
-  },
-
-
-  async playBigPop() {
-
-    const ready = await this.resume();
-
-    if (!ready || !this.ctx) {
-      return;
-    }
-
-    const t = this.ctx.currentTime;
-
-
-    /*
-     * IMPACTO GRAVE
-     */
-
-    const osc =
-      this.ctx.createOscillator();
-
-    const gain =
-      this.ctx.createGain();
-
-    osc.type = 'sine';
-
-    osc.frequency.setValueAtTime(
-      120,
-      t
-    );
-
-    osc.frequency.exponentialRampToValueAtTime(
-      42,
-      t + 0.50
-    );
-
-    gain.gain.setValueAtTime(
-      0.0001,
-      t
-    );
-
-    gain.gain.exponentialRampToValueAtTime(
-      0.85,
-      t + 0.015
-    );
-
-    gain.gain.exponentialRampToValueAtTime(
-      0.001,
-      t + 0.50
-    );
-
-    osc.connect(gain);
-    gain.connect(this.master);
-
-    osc.start(t);
-    osc.stop(t + 0.52);
-
-
-    /*
-     * ESTOURO AGUDO
-     */
-
-    const size = Math.floor(
-      this.ctx.sampleRate * 0.22
-    );
-
-    const buf =
-      this.ctx.createBuffer(
-        1,
-        size,
-        this.ctx.sampleRate
+      gain.gain.setValueAtTime(
+        0.0001,
+        t
       );
 
-    const data =
-      buf.getChannelData(0);
+      gain.gain.exponentialRampToValueAtTime(
+        0.45,
+        t + 0.05
+      );
 
-    for (let i = 0; i < size; i++) {
+      gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        t + 0.30
+      );
 
-      data[i] =
-        (Math.random() * 2 - 1) *
-        Math.pow(1 - i / size, 2);
-    }
+      osc.connect(gain);
+      gain.connect(this.master);
 
-    const noise =
-      this.ctx.createBufferSource();
+      osc.start(t);
 
-    noise.buffer = buf;
-
-    const filter =
-      this.ctx.createBiquadFilter();
-
-    filter.type = 'highpass';
-    filter.frequency.value = 850;
-
-    const noiseGain =
-      this.ctx.createGain();
-
-    noiseGain.gain.setValueAtTime(
-      0.85,
-      t
-    );
-
-    noiseGain.gain.exponentialRampToValueAtTime(
-      0.001,
-      t + 0.32
-    );
-
-    noise.connect(filter);
-    filter.connect(noiseGain);
-    noiseGain.connect(this.master);
-
-    noise.start(t);
-    noise.stop(t + 0.33);
+      osc.stop(
+        t + 0.35
+      );
+    });
   },
 
 
-  async playHeartbeat() {
+  playFanfare() {
 
-    const ready = await this.resume();
-
-    if (!ready || !this.ctx) {
+    if (
+      !this.ctx ||
+      !this.master ||
+      this.ctx.state !== 'running' ||
+      this.muted
+    ) {
       return;
     }
 
-    [0, 0.5, 1.4, 1.9, 2.8, 3.3]
-      .forEach(delay => {
+    const notes = [
+      523.25,
+      659.25,
+      783.99,
+      1046.50
+    ];
 
-        const t =
-          this.ctx.currentTime + delay;
+    notes.forEach((frequency, index) => {
 
-        const osc =
-          this.ctx.createOscillator();
+      const t =
+        this.ctx.currentTime +
+        index * 0.15;
 
-        const gain =
-          this.ctx.createGain();
+      const osc =
+        this.ctx.createOscillator();
 
-        osc.type = 'sine';
-        osc.frequency.value = 52;
+      const gain =
+        this.ctx.createGain();
 
-        gain.gain.setValueAtTime(
-          0.0001,
-          t
-        );
+      osc.type = 'triangle';
 
-        gain.gain.exponentialRampToValueAtTime(
-          0.4,
-          t + 0.05
-        );
+      osc.frequency.value =
+        frequency;
 
-        gain.gain.exponentialRampToValueAtTime(
-          0.0001,
-          t + 0.3
-        );
+      gain.gain.setValueAtTime(
+        0.0001,
+        t
+      );
 
-        osc.connect(gain);
-        gain.connect(this.master);
+      gain.gain.exponentialRampToValueAtTime(
+        0.25,
+        t + 0.05
+      );
 
-        osc.start(t);
-        osc.stop(t + 0.35);
-      });
-  },
+      gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        t + 0.60
+      );
 
+      osc.connect(gain);
+      gain.connect(this.master);
 
-  async playFanfare() {
+      osc.start(t);
 
-    const ready = await this.resume();
-
-    if (!ready || !this.ctx) {
-      return;
-    }
-
-    [523.25, 659.25, 783.99, 1046.5]
-      .forEach((f, i) => {
-
-        const t =
-          this.ctx.currentTime + i * 0.15;
-
-        const osc =
-          this.ctx.createOscillator();
-
-        const gain =
-          this.ctx.createGain();
-
-        osc.type = 'triangle';
-        osc.frequency.value = f;
-
-        gain.gain.setValueAtTime(
-          0.0001,
-          t
-        );
-
-        gain.gain.exponentialRampToValueAtTime(
-          0.22,
-          t + 0.05
-        );
-
-        gain.gain.exponentialRampToValueAtTime(
-          0.0001,
-          t + 0.6
-        );
-
-        osc.connect(gain);
-        gain.connect(this.master);
-
-        osc.start(t);
-        osc.stop(t + 0.65);
-      });
+      osc.stop(
+        t + 0.65
+      );
+    });
   }
 
 };
@@ -1761,18 +1844,34 @@ document.addEventListener('visibilitychange', () => {
 document.getElementById('sound-toggle')
   .addEventListener('click', async (e) => {
 
+    const button = e.currentTarget;
+
     if (!Sound.ctx) {
-      await Sound.unlock();
-    } else {
-      await Sound.resume();
+
+      const unlocked =
+        await Sound.unlock();
+
+      if (unlocked) {
+        Sound.setMuted(false);
+        button.textContent = '🔈';
+      }
+
+      return;
     }
 
-    Sound.setMuted(!Sound.muted);
+    await Sound.resume();
 
-    e.currentTarget.textContent =
-      Sound.muted ? '🔇' : '🔈';
+    Sound.setMuted(
+      !Sound.muted
+    );
+
+    button.textContent =
+      Sound.muted
+        ? '🔇'
+        : '🔈';
 
   });
+
 
 (function buildSky(){
   const sky = document.getElementById('sky');
@@ -1851,11 +1950,6 @@ startBtn.addEventListener('click', async () => {
     return;
   }
 
-  /*
-   * Este clique é uma interação real do usuário.
-   * É o melhor momento para liberar o áudio
-   * nos navegadores de celular.
-   */
   await Sound.unlock();
 
   visitorName = typedName;
@@ -1866,6 +1960,7 @@ startBtn.addEventListener('click', async () => {
   showScreen('screen-greeting');
 
 });
+
 
 let answers = [];
 let qCurrent = 0;
@@ -2058,18 +2153,12 @@ document.getElementById('screen-balloons').addEventListener('click', function(e)
   Sound.playWrongPop();
 });
 
-async function popBalloon(el) {
+function popBalloon(el) {
 
   const rect =
     el.getBoundingClientRect();
 
-  /*
-   * O toque no balão também é uma interação
-   * do usuário. Garantimos que o áudio esteja
-   * funcionando antes de tocar o POP.
-   */
-  await Sound.resume();
-
+  // O áudio já foi desbloqueado anteriormente.
   Sound.playPop();
 
   el.classList.add('pop');
@@ -2331,6 +2420,7 @@ document.getElementById('greeting-continue')
     renderQuestion(0);
 
   });
+
   
 </script>
 
