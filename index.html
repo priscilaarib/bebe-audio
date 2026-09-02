@@ -1850,6 +1850,7 @@ document.getElementById('sound-toggle')
 
       const unlocked =
         await Sound.unlock();
+        Sound.playPop();
 
       if (unlocked) {
         Sound.setMuted(false);
