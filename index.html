@@ -1132,54 +1132,50 @@ body.theme-girl .finale-word{ color: #F2B6CE; text-shadow: 0 0 40px rgba(232,160
 ========================= */
 
 .video-reveal{
-  position: fixed;
-  inset: 0;
-  z-index: 10;
+  position: fixed !important;
+  inset: 0 !important;
 
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 100vw !important;
+  height: 100vh !important;
 
-  padding: 18px;
+  z-index: 99999 !important;
 
-  background:
-    radial-gradient(
-      circle at center,
-      rgba(255,255,255,.10),
-      rgba(0,0,0,.92) 75%
-    );
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  background: #000 !important;
 
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
 
-  transition: opacity .8s ease;
+  transition: opacity .5s ease;
 }
 
 .video-reveal.show{
-  opacity: 1;
-  pointer-events: auto;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
 }
 
 #reveal-video{
-  display: block;
-  width: min(92vw, 900px);
-  height: auto;
-  max-height: 82vh;
+  display: block !important;
 
-  object-fit: contain;
+  width: 90vw !important;
+  height: 80vh !important;
+
+  max-width: 900px !important;
+  max-height: 80vh !important;
+
+  object-fit: contain !important;
+
+  background: #222 !important;
+
+  opacity: 1 !important;
+  visibility: visible !important;
 
   border-radius: 18px;
-
-  background: #000;
-
-  box-shadow:
-    0 20px 60px rgba(0,0,0,.55),
-    0 0 45px rgba(226,201,143,.20);
-
-  outline: none;
-
-  position: relative;
-  z-index: 11;
 }
 
 /* Botão aparece somente depois do vídeo */
