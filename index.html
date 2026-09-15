@@ -1126,6 +1126,123 @@ body.theme-girl .finale-word{ color: #F2B6CE; text-shadow: 0 0 40px rgba(232,160
   }
 }
 
+  /* =========================
+   VÍDEO DA REVELAÇÃO
+========================= */
+
+.video-reveal{
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 18px;
+
+  background:
+    radial-gradient(
+      circle at center,
+      rgba(255,255,255,.10),
+      rgba(0,0,0,.92) 75%
+    );
+
+  opacity: 0;
+  pointer-events: none;
+
+  transition: opacity .8s ease;
+}
+
+.video-reveal.show{
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#reveal-video{
+  width: min(92vw, 900px);
+  max-height: 82vh;
+
+  object-fit: contain;
+
+  border-radius: 18px;
+
+  background: #000;
+
+  box-shadow:
+    0 20px 60px rgba(0,0,0,.55),
+    0 0 45px rgba(226,201,143,.20);
+
+  outline: none;
+}
+
+/* Botão aparece somente depois do vídeo */
+
+.video-continue{
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+
+  transform: translateX(-50%) translateY(15px);
+
+  padding: 12px 28px;
+
+  border: 1px solid rgba(255,255,255,.45);
+  border-radius: 100px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #B89452,
+      #E2C98F,
+      #B89452
+    );
+
+  color: #3A2D23;
+
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 19px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  opacity: 0;
+  pointer-events: none;
+
+  transition:
+    opacity .5s ease,
+    transform .4s ease;
+}
+
+.video-continue.show{
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.video-continue:hover{
+  filter: brightness(1.06);
+  transform: translateX(-50%) translateY(-2px);
+}
+
+@media (max-width: 600px){
+
+  .video-reveal{
+    padding: 10px;
+  }
+
+  #reveal-video{
+    width: 96vw;
+    max-height: 75vh;
+    border-radius: 12px;
+  }
+
+  .video-continue{
+    bottom: 22px;
+    font-size: 18px;
+  }
+}
+
 
 </style>
 </head>
@@ -1243,25 +1360,26 @@ body.theme-girl .finale-word{ color: #F2B6CE; text-shadow: 0 0 40px rgba(232,160
     <div class="balloon-field" id="balloon-field"></div>
   </section>
 
-  <section class="screen" id="screen-finale">
-    <p class="sub" id="finale-thanks" style="font-size:19px; max-width:34ch;">Obrigado(a), <span class="script" id="finale-name" style="font-size:28px;">amigo(a)</span>, por fazer parte da nossa história.</p>
-    <div class="finale-word" id="finale-word">É menino!</div>
-    <p class="sub" id="finale-sub">Mal podemos esperar pra conhecer você. 💙</p>
-    <button class="replay-btn" id="replay-btn">Jogar novamente</button>
+<section class="screen" id="screen-finale">
 
-    <button class="secret-icon" id="secret-icon" aria-label="Ver novamente a mensagem importante">
-     !
+  <div class="video-reveal">
+    <video
+      id="reveal-video"
+      playsinline
+      preload="auto"
+      controls="false"
+    >
+      <source src="revelacao.mp4" type="video/mp4">
+      Seu navegador não suporta vídeo.
+    </video>
+
+    <button class="video-continue" id="video-continue" type="button">
+      Continuar ♡
     </button>
+  </div>
 
-    <div class="secret-popup" id="secret-popup">
-      <div class="secret-popup-title">✨ Você descobriu!</div>
-      <div class="secret-popup-text">
-      Agora guarde esse segredo por enquanto. 🤫<br>
-      Não conte para ninguém — deixe que cada um descubra sozinho.
-      </div>
-    </div>
+</section>
 
-  </section>
 
 </div>
 
@@ -1772,46 +1890,109 @@ function runHeartbeatSequence(){
 }
 
 function triggerFinale(){
+
   const golden = document.getElementById('golden-balloon');
+  const videoReveal = document.querySelector('.video-reveal');
+  const video = document.getElementById('reveal-video');
+  const continueBtn = document.getElementById('video-continue');
+
+  // Som do estouro do balão dourado
   Sound.playBigPop();
-  setTimeout(() => Sound.playFanfare(), 700);
-  golden.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
-  golden.style.transform = 'translate(-50%,-50%) scale(1.6)';
+
+  // Pequena pausa e fanfarra
+  setTimeout(() => {
+    Sound.playFanfare();
+  }, 700);
+
+  // Estoura visualmente o balão dourado
+  golden.style.transition =
+    'transform 0.2s ease, opacity 0.2s ease';
+
+  golden.style.transform =
+    'translate(-50%,-50%) scale(1.6)';
+
   golden.style.opacity = '0';
-  burstSparkles(window.innerWidth/2, window.innerHeight*0.4);
 
+  // Faíscas no local do balão
+  burstSparkles(
+    window.innerWidth / 2,
+    window.innerHeight * 0.4
+  );
+
+  // Mostra o vídeo
   setTimeout(() => {
-    document.getElementById('finale-name').textContent = visitorName;
-    const isBoy = CONFIG.babyGender === 'menino';
-    document.body.classList.add(isBoy ? 'theme-boy' : 'theme-girl');
-    document.getElementById('finale-word').textContent = isBoy ? 'É menino!' : 'É menina!';
-    document.getElementById('finale-sub').textContent = isBoy
-      ? 'Mal podemos esperar pra conhecer você. 💙'
-      : 'Mal podemos esperar pra conhecer você. 💗';
-    showScreen('screen-finale');
-    burstConfetti(isBoy);
-    burstFireworks(isBoy);
-  }, 350);
 
-  setTimeout(() => {
-  const popup = document.getElementById('secret-popup');
+    videoReveal.classList.add('show');
 
-  popup.classList.add('show');
+    continueBtn.classList.remove('show');
 
-  setTimeout(() => {
-    popup.classList.remove('show');
-    popup.classList.add('sucking');
+    // Começa sempre do início
+    video.currentTime = 0;
+
+    /*
+      Tenta iniciar automaticamente.
+      Como o clique no balão é uma interação do usuário,
+      normalmente o navegador permitirá a reprodução.
+    */
+    const playPromise = video.play();
+
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        /*
+          Se o navegador bloquear a reprodução,
+          os controles ficam disponíveis temporariamente.
+        */
+        video.controls = true;
+      });
+    }
+
+  }, 450);
+
+  // Quando o vídeo terminar
+  video.onended = () => {
+
+    continueBtn.classList.add('show');
+
+  };
+
+  // Botão depois do vídeo
+  continueBtn.onclick = () => {
+
+    video.pause();
+
+    videoReveal.classList.remove('show');
 
     setTimeout(() => {
-      popup.classList.remove('sucking');
-      document.getElementById('secret-icon').classList.add('attention');
-    }, 750);
 
-  }, 8000);
+      /*
+        Se quiser manter uma tela final depois do vídeo,
+        ela pode aparecer aqui.
+      */
 
-}, 4000);
+      const isBoy = CONFIG.babyGender === 'menino';
+
+      document.getElementById('finale-name').textContent =
+        visitorName;
+
+      document.getElementById('finale-word').textContent =
+        isBoy ? 'É menino!' : 'É menina!';
+
+      document.getElementById('finale-sub').textContent =
+        isBoy
+          ? 'Mal podemos esperar pra conhecer você. 💙'
+          : 'Mal podemos esperar pra conhecer você. 💗';
+
+      showScreen('screen-finale');
+
+      burstConfetti(isBoy);
+      burstFireworks(isBoy);
+
+    }, 700);
+
+  };
 
 }
+
 
 document.getElementById('secret-icon').addEventListener('click', () => {
   const popup = document.getElementById('secret-popup');
