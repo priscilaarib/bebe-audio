@@ -1373,7 +1373,6 @@ body.theme-girl .finale-word{ color: #F2B6CE; text-shadow: 0 0 40px rgba(232,160
       id="reveal-video"
       playsinline
       preload="auto"
-      controls="false"
     >
       <source src="revelacao.mp4" type="video/mp4">
       Seu navegador não suporta vídeo.
@@ -2074,28 +2073,33 @@ function triggerFinale(){
   );
 
 
-  // Abre vídeo
-  setTimeout(() => {
+// Abre vídeo
+setTimeout(() => {
 
-    videoReveal.classList.add('show');
+  console.log('ABRINDO VÍDEO');
 
-    continueBtn.classList.remove('show');
+  videoReveal.classList.add('show');
 
-    video.currentTime = 0;
+  continueBtn.classList.remove('show');
 
-    const playPromise = video.play();
+  video.currentTime = 0;
 
-    if(playPromise){
+  video.muted = false;
+  video.controls = false;
 
-      playPromise.catch(() => {
+  video.play()
+    .then(() => {
+      console.log('VÍDEO COMEÇOU A TOCAR');
+    })
+    .catch(error => {
+      console.error('ERRO AO TOCAR VÍDEO:', error);
 
-        video.controls = true;
+      // Se o navegador bloquear o autoplay,
+      // mostramos os controles para permitir iniciar manualmente.
+      video.controls = true;
+    });
 
-      });
-
-    }
-
-  }, 450);
+}, 450);
 
 
   // Quando terminar o vídeo
