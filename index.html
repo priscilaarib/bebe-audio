@@ -1788,9 +1788,6 @@ document.getElementById('next-btn').addEventListener('click', () => {
 
 });
 
-
-
-
 let poppedCount = 0;
 const REQUIRED_POPS = 7;
 let secretRevealed = false;
@@ -1883,24 +1880,31 @@ function buildBalloonField(){
 
 function popBalloon(balloon){
 
-  // Evita contar o mesmo balão duas vezes
-  if(
+  if (
     !balloon ||
     balloon.classList.contains('pop') ||
     secretRevealed
-  ){
+  ) {
     return;
   }
 
-  // Conta imediatamente
+  // Marca como estourado imediatamente
+  balloon.classList.add('pop');
+
+  // Conta o balão
   poppedCount++;
 
-  console.log('Balão estourado:', poppedCount);
+  console.log(
+    'Balões estourados:',
+    poppedCount,
+    '/',
+    REQUIRED_POPS
+  );
 
   // Som
   Sound.playPop();
 
-  // Efeito visual
+  // Faíscas
   const rect = balloon.getBoundingClientRect();
 
   burstSparkles(
@@ -1908,31 +1912,25 @@ function popBalloon(balloon){
     rect.top + rect.height / 2
   );
 
-  balloon.classList.add('pop');
-
+  // Remove depois da animação
   setTimeout(() => {
-
-    if(balloon.parentNode){
+    if (balloon.parentNode) {
       balloon.remove();
     }
-
   }, 260);
 
-  // CHEGOU A 7
-  if(poppedCount >= REQUIRED_POPS){
+  // Chegou aos 7!
+  if (poppedCount >= REQUIRED_POPS) {
 
     secretRevealed = true;
 
-    console.log('7 balões! Iniciando sequência.');
+    console.log('🎈 7 BALÕES! Revelando o segredo...');
 
     setTimeout(() => {
-
       runHeartbeatSequence();
-
     }, 500);
   }
 }
-
 
 function runHeartbeatSequence(){
 
