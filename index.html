@@ -415,7 +415,7 @@ p{ margin: 0; }
 }
 
 
-.balloon-field{ position: fixed; inset: 0; z-index: 2; pointer-events: none; overflow: visible;}
+.balloon-field{ position: fixed; inset: 0; z-index: 2; pointer-events: none; overflow: visible; }
 .floaty{
   position: absolute;
   bottom: -18%;
@@ -481,6 +481,7 @@ p{ margin: 0; }
   width: 210px;
   height: 255px;
   transform: translate(-50%,-50%);
+  pointer-events: auto;
 
   border-radius: 50% 50% 48% 48% / 48% 48% 54% 54%;
 
@@ -1789,164 +1790,238 @@ document.getElementById('next-btn').addEventListener('click', () => {
 let poppedCount = 0;
 const REQUIRED_POPS = 7;
 let secretRevealed = false;
-let heartbeatStarted = false;
-
 
 function buildBalloonField(){
-  poppedCount = 0; secretRevealed = false;
+
+  poppedCount = 0;
+  secretRevealed = false;
+
   const field = document.getElementById('balloon-field');
+
   field.innerHTML = '';
+
   const colors = [
-  '#D889A8',
-  '#5F91BD',
-  '#9788C2',
-  '#D5AD5C',
-  '#68A98D',
-  '#D77D78'
-];
+    '#D889A8',
+    '#5F91BD',
+    '#9788C2',
+    '#D5AD5C',
+    '#68A98D',
+    '#D77D78'
+  ];
+
   const count = 16;
 
-  for (let i = 0; i < count; i++) {
-    const b = document.createElement('div'); b.className = 'floaty';
+  for(let i = 0; i < count; i++){
+
+    const b = document.createElement('div');
+
+    b.className = 'floaty';
+
     const size = 100 + Math.random() * 60;
     const duration = 9 + Math.random() * 6;
-    b.style.width = size + 'px'; b.style.height = (size * 1.08) + 'px';
+
+    b.style.width = size + 'px';
+    b.style.height = (size * 1.08) + 'px';
+
     const columns = 12;
     const column = i % columns;
 
-    b.style.left = (
-      3 + (column * (94 / (columns - 1))) + (Math.random() * 4 - 2)
-    ) + '%';
+    b.style.left =
+      (
+        3 +
+        (column * (94 / (columns - 1))) +
+        (Math.random() * 4 - 2)
+      ) + '%';
 
-    b.style.background = `radial-gradient(circle at 32% 28%, #fff8, ${colors[i % colors.length]})`;
-    b.style.animationDuration = duration + 's, ' + (2.5 + Math.random() * 1.5) + 's';
-    b.style.animationDelay = (-Math.random() * duration) + 's, ' + (-Math.random() * 2) + 's';
-    b.addEventListener('click', () => popBalloon(b), { once: true });
+    b.style.background =
+      `radial-gradient(
+        circle at 32% 28%,
+        #fff8,
+        ${colors[i % colors.length]}
+      )`;
+
+    b.style.animationDuration =
+      duration + 's, ' +
+      (2.5 + Math.random() * 1.5) + 's';
+
+    b.style.animationDelay =
+      (-Math.random() * duration) + 's, ' +
+      (-Math.random() * 2) + 's';
+
+    b.addEventListener('click', function(e){
+
+      e.stopPropagation();
+
+      popBalloon(b);
+
+    });
+
     field.appendChild(b);
   }
-  const golden = document.createElement('div'); golden.className = 'golden-balloon'; golden.id = 'golden-balloon';
-  golden.addEventListener('click', triggerFinale, { once: true });
+
+  // BALÃO DOURADO
+  const golden = document.createElement('div');
+
+  golden.className = 'golden-balloon';
+  golden.id = 'golden-balloon';
+
+  golden.addEventListener('click', function(e){
+
+    e.stopPropagation();
+
+    triggerFinale();
+
+  });
+
   field.appendChild(golden);
 }
 
-document.getElementById('screen-balloons').addEventListener('click', function(e){
 
-  // Se clicou em qualquer balão, não toca o som de erro
-  if (
-    e.target.closest('.floaty') ||
-    e.target.closest('.golden-balloon')
-  ) {
+function popBalloon(balloon){
+
+  // Evita contar o mesmo balão duas vezes
+  if(
+    !balloon ||
+    balloon.classList.contains('pop') ||
+    secretRevealed
+  ){
     return;
   }
 
-  Sound.playWrongPop();
-});
+  // Conta imediatamente
+  poppedCount++;
 
-function popBalloon(el){
+  console.log('Balão estourado:', poppedCount);
 
-  if (!el || el.classList.contains('pop')) return;
-
-  const rect = el.getBoundingClientRect();
-
-  Sound.init();
-
-  if (Sound.ctx && Sound.ctx.state === 'suspended') {
-    Sound.ctx.resume();
-  }
-
+  // Som
   Sound.playPop();
 
-  el.classList.add('pop');
+  // Efeito visual
+  const rect = balloon.getBoundingClientRect();
 
   burstSparkles(
     rect.left + rect.width / 2,
     rect.top + rect.height / 2
   );
 
+  balloon.classList.add('pop');
+
   setTimeout(() => {
-    if (el && el.parentNode) {
-      el.remove();
+
+    if(balloon.parentNode){
+      balloon.remove();
     }
+
   }, 260);
 
-  poppedCount++;
+  // CHEGOU A 7
+  if(poppedCount >= REQUIRED_POPS){
 
-  console.log('Balões estourados:', poppedCount);
+    secretRevealed = true;
 
-  // Quando chegar a 7, inicia a sequência
-  if (
-    poppedCount >= REQUIRED_POPS &&
-    !heartbeatStarted
-  ) {
-
-    heartbeatStarted = true;
-
-    console.log('7 balões encontrados! Iniciando revelação...');
+    console.log('7 balões! Iniciando sequência.');
 
     setTimeout(() => {
+
       runHeartbeatSequence();
+
     }, 500);
   }
 }
 
 
-
 function runHeartbeatSequence(){
 
-  const darken = document.getElementById('darken');
-  const heartbeatMsg = document.getElementById('heartbeat-msg');
-  const heartbeatLine = document.getElementById('heartbeat-line');
-  const golden = document.getElementById('golden-balloon');
+  const eyebrow =
+    document.getElementById('balloon-eyebrow');
 
-  // Atualiza o texto
-  document.getElementById('balloon-eyebrow').textContent =
-    'quase lá';
+  const title =
+    document.getElementById('balloon-title');
 
-  document.getElementById('balloon-title').textContent =
-    '✨ Você encontrou!';
+  const sub =
+    document.getElementById('balloon-sub');
 
-  document.getElementById('balloon-sub').textContent =
-    'Agora falta só mais um…';
+  const darken =
+    document.getElementById('darken');
 
-  // Faz os balões restantes desaparecerem
-  document.querySelectorAll('.floaty').forEach(b => {
+  const heartbeatMsg =
+    document.getElementById('heartbeat-msg');
 
-    if (!b.classList.contains('pop')) {
+  const heartbeatLine =
+    document.getElementById('heartbeat-line');
 
-      b.classList.add('pop');
+  const golden =
+    document.getElementById('golden-balloon');
 
-      setTimeout(() => {
-        if (b.parentNode) b.remove();
-      }, 260);
 
-    }
+  // Atualiza textos
+  eyebrow.textContent = 'quase lá';
+
+  title.textContent = '✨ Você encontrou!';
+
+  sub.textContent = 'Agora falta só mais um…';
+
+
+  // Esconde todos os balões normais
+  document.querySelectorAll('.floaty').forEach(balloon => {
+
+    balloon.classList.add('pop');
+
+    setTimeout(() => {
+
+      if(balloon.parentNode){
+        balloon.remove();
+      }
+
+    }, 260);
 
   });
+
 
   // Escurece a tela
   darken.classList.add('show');
 
-  // Som do coração
+
+  // Batimento
   Sound.playHeartbeat();
 
-  // Mostra mensagem
+
+  // Mensagem
   setTimeout(() => {
+
     heartbeatMsg.classList.add('show');
+
   }, 500);
 
+
   setTimeout(() => {
+
     heartbeatLine.classList.add('show');
+
   }, 1600);
 
-  // Esconde a mensagem e mostra o balão dourado
+
+  // MOSTRA O BALÃO DOURADO
   setTimeout(() => {
 
     heartbeatMsg.classList.remove('show');
     heartbeatLine.classList.remove('show');
+
     darken.classList.remove('show');
 
-    if (golden) {
+
+    if(golden){
+
       golden.classList.add('show');
+
+      console.log('BALÃO DOURADO APARECEU!');
+
+    }else{
+
+      console.error(
+        'ERRO: balão dourado não foi encontrado.'
+      );
+
     }
 
   }, 4200);
@@ -1955,71 +2030,76 @@ function runHeartbeatSequence(){
 
 function triggerFinale(){
 
-  const golden = document.getElementById('golden-balloon');
-  const videoReveal = document.querySelector('.video-reveal');
-  const video = document.getElementById('reveal-video');
-  const continueBtn = document.getElementById('video-continue');
+  const golden =
+    document.getElementById('golden-balloon');
 
-  // Som do estouro do balão dourado
+  const videoReveal =
+    document.querySelector('.video-reveal');
+
+  const video =
+    document.getElementById('reveal-video');
+
+  const continueBtn =
+    document.getElementById('video-continue');
+
+
+  if(!golden) return;
+
+
+  // Som do estouro
   Sound.playBigPop();
 
-  // Pequena pausa e fanfarra
-  setTimeout(() => {
-    Sound.playFanfare();
-  }, 700);
 
-  // Estoura visualmente o balão dourado
+  // Efeito de estouro
   golden.style.transition =
-    'transform 0.2s ease, opacity 0.2s ease';
+    'transform .2s ease, opacity .2s ease';
 
   golden.style.transform =
     'translate(-50%,-50%) scale(1.6)';
 
   golden.style.opacity = '0';
 
-  // Faíscas no local do balão
+
+  // Faíscas
   burstSparkles(
     window.innerWidth / 2,
-    window.innerHeight * 0.4
+    window.innerHeight * .4
   );
 
-  // Mostra o vídeo
+
+  // Abre vídeo
   setTimeout(() => {
 
     videoReveal.classList.add('show');
 
     continueBtn.classList.remove('show');
 
-    // Começa sempre do início
     video.currentTime = 0;
 
-    /*
-      Tenta iniciar automaticamente.
-      Como o clique no balão é uma interação do usuário,
-      normalmente o navegador permitirá a reprodução.
-    */
     const playPromise = video.play();
 
-    if (playPromise !== undefined) {
+    if(playPromise){
+
       playPromise.catch(() => {
-        /*
-          Se o navegador bloquear a reprodução,
-          os controles ficam disponíveis temporariamente.
-        */
+
         video.controls = true;
+
       });
+
     }
 
   }, 450);
 
-  // Quando o vídeo terminar
+
+  // Quando terminar o vídeo
   video.onended = () => {
 
     continueBtn.classList.add('show');
 
   };
 
-  // Botão depois do vídeo
+
+  // Depois do vídeo
   continueBtn.onclick = () => {
 
     video.pause();
@@ -2028,28 +2108,7 @@ function triggerFinale(){
 
     setTimeout(() => {
 
-      /*
-        Se quiser manter uma tela final depois do vídeo,
-        ela pode aparecer aqui.
-      */
-
-      const isBoy = CONFIG.babyGender === 'menino';
-
-      document.getElementById('finale-name').textContent =
-        visitorName;
-
-      document.getElementById('finale-word').textContent =
-        isBoy ? 'É menino!' : 'É menina!';
-
-      document.getElementById('finale-sub').textContent =
-        isBoy
-          ? 'Mal podemos esperar pra conhecer você. 💙'
-          : 'Mal podemos esperar pra conhecer você. 💗';
-
       showScreen('screen-finale');
-
-      burstConfetti(isBoy);
-      burstFireworks(isBoy);
 
     }, 700);
 
