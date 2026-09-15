@@ -79,16 +79,18 @@ body.theme-girl #sky{
   background:
     radial-gradient(
       ellipse 90% 60% at 50% 100%,
-      #E8A8BE 0%,
+      #F5C5D7 0%,
       transparent 68%
     ),
     linear-gradient(
       180deg,
-      #69465A 0%,
-      #85566B 45%,
-      #A87388 100%
+      #95647A 0%,
+      #B47A91 45%,
+      #D09AAF 100%
     );
 }
+
+
 
 
 
@@ -1202,14 +1204,7 @@ body.theme-girl .finale-word{ color: #F2B6CE; text-shadow: 0 0 40px rgba(232,160
       <h2>Olá, <span class="greeting-name" id="greet-name">amigo(a)</span></h2>
       <p class="sub" style="margin-bottom:0;">Que alegria ter você aqui pra viver esse momento com a gente. Antes da grande revelação, preparamos uma pequena aventura só pra você. Vamos?</p>
     </div>
-    <button
-  class="btn-primary"
-  id="greeting-continue"
-  type="button"
-  style="margin-top:26px;"
->
-  Começar a aventura
-</button>
+    <button class="btn-primary" id="greeting-continue" type="button" onclick="document.getElementById('screen-greeting').classList.remove('active');document.getElementById('screen-quiz').classList.add('active');buildProgress();renderQuestion(0);" style="margin-top:26px;">Começar a aventura</button>
 
   </section>
 
@@ -1262,7 +1257,7 @@ body.theme-girl .finale-word{ color: #F2B6CE; text-shadow: 0 0 40px rgba(232,160
       <div class="secret-popup-title">✨ Você descobriu!</div>
       <div class="secret-popup-text">
       Agora guarde esse segredo por enquanto. 🤫<br>
-      Não conte para os familiares — deixe que cada um descubra por si mesmo.
+      Não conte para ninguém — deixe que cada um descubra sozinho.
       </div>
     </div>
 
@@ -1272,7 +1267,7 @@ body.theme-girl .finale-word{ color: #F2B6CE; text-shadow: 0 0 40px rgba(232,160
 
 <script>
 const CONFIG = {
-  babyGender: 'menina',
+  babyGender: 'menino',
   parentNames: ' ',
 };
 
@@ -1286,603 +1281,173 @@ const QUESTIONS = [
 ];
 
 const Sound = {
+  ctx: null, master: null, playing: false, muted: false, oscs: [],
 
-  ctx: null,
-  master: null,
-  muted: false,
-  unlocked: false,
-
-  async unlock() {
-
-  try {
-
-    const AudioContextClass =
-      window.AudioContext ||
-      window.webkitAudioContext;
-
-    if (!AudioContextClass) {
-      console.error('Web Audio API não disponível.');
-      return false;
-    }
-
-    /*
-     * Cria o contexto uma única vez.
-     */
+  init(){
     if (!this.ctx) {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
 
-      this.ctx =
-        new AudioContextClass();
-
-      this.master =
-        this.ctx.createGain();
-
-      this.master.gain.value = 0.22;
-
-      this.master.connect(
-        this.ctx.destination
-      );
+      this.master = this.ctx.createGain();
+      this.master.gain.value = this.muted ? 0 : 0.22;
+      this.master.connect(this.ctx.destination);
     }
 
-    /*
-     * MUITO IMPORTANTE:
-     * resume acontece diretamente no evento
-     * de toque do usuário.
-     */
-    if (this.ctx.state !== 'running') {
-      await this.ctx.resume();
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume();
     }
+  },
 
-    /*
-     * Cria um som REAL, porém extremamente baixo.
-     * Isso ajuda Safari/iOS e alguns Androids a
-     * considerar o contexto de áudio como utilizado.
-     */
-    const osc =
-      this.ctx.createOscillator();
+  unlock(){
+    this.init();
 
-    const gain =
-      this.ctx.createGain();
+    if (!this.ctx) return;
 
-    osc.type = 'sine';
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
 
-    osc.frequency.value = 440;
-
-    gain.gain.setValueAtTime(
-      0.00001,
-      this.ctx.currentTime
-    );
+    gain.gain.value = 0.0001;
 
     osc.connect(gain);
     gain.connect(this.master);
 
-    osc.start(
-      this.ctx.currentTime
-    );
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.05);
 
-    osc.stop(
-      this.ctx.currentTime + 0.1
-    );
-
-    /*
-     * Segunda chamada ao resume.
-     */
-    await this.ctx.resume();
-
-    this.unlocked =
-      this.ctx.state === 'running';
-
-    console.log(
-      'AudioContext:',
-      this.ctx.state
-    );
-
-    return this.unlocked;
-
-  } catch (error) {
-
-    console.error(
-      'ERRO DE ÁUDIO:',
-      error
-    );
-
-    return false;
-  }
-}
-
-
-
-  async resume() {
-
-    if (!this.ctx) {
-      return false;
-    }
-
-    try {
-
-      if (this.ctx.state !== 'running') {
-        await this.ctx.resume();
-      }
-
-      return this.ctx.state === 'running';
-
-    } catch (error) {
-
-      console.warn(
-        'Não foi possível retomar áudio:',
-        error
-      );
-
-      return false;
-    }
+    this.ctx.resume();
   },
 
+  setMuted(m){ this.muted = m; if (this.master) this.master.gain.value = m ? 0 : 0.22; },
+  playPop(){
+    this.init();
 
-  setMuted(value) {
-
-    this.muted = value;
-
-    if (this.master && this.ctx) {
-
-      this.master.gain.cancelScheduledValues(
-        this.ctx.currentTime
-      );
-
-      this.master.gain.setTargetAtTime(
-        value ? 0 : 0.22,
-        this.ctx.currentTime,
-        0.01
-      );
+    if (this.ctx.state === 'suspended') {
+    this.ctx.resume();
     }
-  },
-
-
-  playPop() {
-
-    if (
-      !this.ctx ||
-      !this.master ||
-      this.ctx.state !== 'running' ||
-      this.muted
-    ) {
-      return;
-    }
-
     const t = this.ctx.currentTime;
 
-
-    /*
-     * ESTOURO
-     */
-
-    const duration = 0.16;
-
-    const buffer =
-      this.ctx.createBuffer(
-        1,
-        Math.floor(
-          this.ctx.sampleRate * duration
-        ),
-        this.ctx.sampleRate
-      );
-
-    const data =
-      buffer.getChannelData(0);
-
-    for (
-      let i = 0;
-      i < data.length;
-      i++
-    ) {
-
-      const envelope =
-        Math.pow(
-          1 - i / data.length,
-          2
-        );
-
-      data[i] =
-        (Math.random() * 2 - 1) *
-        envelope;
-    }
-
-    const noise =
-      this.ctx.createBufferSource();
-
-    noise.buffer = buffer;
-
-    const filter =
-      this.ctx.createBiquadFilter();
-
-    filter.type = 'bandpass';
-    filter.frequency.value = 1700;
-    filter.Q.value = 0.7;
-
-    const gain =
-      this.ctx.createGain();
-
-    gain.gain.setValueAtTime(
-      0.0001,
-      t
-    );
-
-    gain.gain.exponentialRampToValueAtTime(
-      0.8,
-      t + 0.006
-    );
-
-    gain.gain.exponentialRampToValueAtTime(
-      0.001,
-      t + duration
-    );
-
-    noise
-      .connect(filter);
-
-    filter
-      .connect(gain);
-
-    gain
-      .connect(this.master);
-
-    noise.start(t);
-
-    noise.stop(
-      t + duration
-    );
+    const size = this.ctx.sampleRate * 0.14;
+    const buf = this.ctx.createBuffer(1, size, this.ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < size; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / size);
+    const noise = this.ctx.createBufferSource(); noise.buffer = buf;
+    const filt = this.ctx.createBiquadFilter(); filt.type = 'bandpass'; filt.frequency.value = 1400;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.70, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+    noise.connect(filt); filt.connect(g); g.connect(this.master);
+    noise.start(t); noise.stop(t + 0.15);
   },
 
+  playWrongPop(){
+  this.init();
 
-  playWrongPop() {
+  const t = this.ctx.currentTime;
 
-    if (
-      !this.ctx ||
-      !this.master ||
-      this.ctx.state !== 'running' ||
-      this.muted
-    ) {
-      return;
-    }
+  const osc = this.ctx.createOscillator();
+  const gain = this.ctx.createGain();
 
-    const t =
-      this.ctx.currentTime;
+  osc.type = 'sine';
 
-    const osc =
-      this.ctx.createOscillator();
+  osc.frequency.setValueAtTime(380, t);
+  osc.frequency.exponentialRampToValueAtTime(110, t + 0.28);
 
-    const gain =
-      this.ctx.createGain();
+  gain.gain.setValueAtTime(0.0001, t);
+  gain.gain.exponentialRampToValueAtTime(0.28, t + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
 
-    osc.type = 'sine';
+  osc.connect(gain);
+  gain.connect(this.master);
 
-    osc.frequency.setValueAtTime(
-      360,
-      t
-    );
+  osc.start(t);
+  osc.stop(t + 0.3);
+},
 
-    osc.frequency.exponentialRampToValueAtTime(
-      100,
-      t + 0.25
-    );
+  playBigPop(){
+  this.init();
 
-    gain.gain.setValueAtTime(
-      0.0001,
-      t
-    );
+  const t = this.ctx.currentTime;
 
-    gain.gain.exponentialRampToValueAtTime(
-      0.25,
-      t + 0.02
-    );
+  // impacto grave
+  const osc = this.ctx.createOscillator();
+  const gain = this.ctx.createGain();
 
-    gain.gain.exponentialRampToValueAtTime(
-      0.001,
-      t + 0.25
-    );
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(120, t);
+  osc.frequency.exponentialRampToValueAtTime(45, t + 0.50);
 
-    osc.connect(gain);
-    gain.connect(this.master);
+  gain.gain.setValueAtTime(0.0001, t);
+  gain.gain.exponentialRampToValueAtTime(0.65, t + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.50);
 
-    osc.start(t);
-    osc.stop(t + 0.27);
-  },
+  osc.connect(gain);
+  gain.connect(this.master);
 
+  osc.start(t);
+  osc.stop(t + 0.4);
 
-  playBigPop() {
+  // estalo/agudo por cima
+  const size = this.ctx.sampleRate * 0.22;
+  const buf = this.ctx.createBuffer(1, size, this.ctx.sampleRate);
+  const data = buf.getChannelData(0);
 
-    if (
-      !this.ctx ||
-      !this.master ||
-      this.ctx.state !== 'running' ||
-      this.muted
-    ) {
-      return;
-    }
-
-    const t =
-      this.ctx.currentTime;
-
-
-    /*
-     * GRAVE DO ESTOURO
-     */
-
-    const bass =
-      this.ctx.createOscillator();
-
-    const bassGain =
-      this.ctx.createGain();
-
-    bass.type = 'sine';
-
-    bass.frequency.setValueAtTime(
-      130,
-      t
-    );
-
-    bass.frequency.exponentialRampToValueAtTime(
-      38,
-      t + 0.45
-    );
-
-    bassGain.gain.setValueAtTime(
-      0.0001,
-      t
-    );
-
-    bassGain.gain.exponentialRampToValueAtTime(
-      0.9,
-      t + 0.01
-    );
-
-    bassGain.gain.exponentialRampToValueAtTime(
-      0.001,
-      t + 0.45
-    );
-
-    bass.connect(bassGain);
-    bassGain.connect(this.master);
-
-    bass.start(t);
-    bass.stop(t + 0.48);
-
-
-    /*
-     * ESTOURO AGUDO
-     */
-
-    const duration = 0.30;
-
-    const buffer =
-      this.ctx.createBuffer(
-        1,
-        Math.floor(
-          this.ctx.sampleRate * duration
-        ),
-        this.ctx.sampleRate
-      );
-
-    const data =
-      buffer.getChannelData(0);
-
-    for (
-      let i = 0;
-      i < data.length;
-      i++
-    ) {
-
-      data[i] =
-        (Math.random() * 2 - 1) *
-        Math.pow(
-          1 - i / data.length,
-          2
-        );
-    }
-
-    const noise =
-      this.ctx.createBufferSource();
-
-    noise.buffer = buffer;
-
-    const filter =
-      this.ctx.createBiquadFilter();
-
-    filter.type = 'highpass';
-    filter.frequency.value = 800;
-
-    const gain =
-      this.ctx.createGain();
-
-    gain.gain.setValueAtTime(
-      0.8,
-      t
-    );
-
-    gain.gain.exponentialRampToValueAtTime(
-      0.001,
-      t + duration
-    );
-
-    noise.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.master);
-
-    noise.start(t);
-
-    noise.stop(
-      t + duration
-    );
-  },
-
-
-  playHeartbeat() {
-
-    if (
-      !this.ctx ||
-      !this.master ||
-      this.ctx.state !== 'running' ||
-      this.muted
-    ) {
-      return;
-    }
-
-    const beats = [
-      0,
-      0.5,
-      1.4,
-      1.9,
-      2.8,
-      3.3
-    ];
-
-    beats.forEach(delay => {
-
-      const t =
-        this.ctx.currentTime + delay;
-
-      const osc =
-        this.ctx.createOscillator();
-
-      const gain =
-        this.ctx.createGain();
-
-      osc.type = 'sine';
-
-      osc.frequency.value = 52;
-
-      gain.gain.setValueAtTime(
-        0.0001,
-        t
-      );
-
-      gain.gain.exponentialRampToValueAtTime(
-        0.45,
-        t + 0.05
-      );
-
-      gain.gain.exponentialRampToValueAtTime(
-        0.0001,
-        t + 0.30
-      );
-
-      osc.connect(gain);
-      gain.connect(this.master);
-
-      osc.start(t);
-
-      osc.stop(
-        t + 0.35
-      );
-    });
-  },
-
-
-  playFanfare() {
-
-    if (
-      !this.ctx ||
-      !this.master ||
-      this.ctx.state !== 'running' ||
-      this.muted
-    ) {
-      return;
-    }
-
-    const notes = [
-      523.25,
-      659.25,
-      783.99,
-      1046.50
-    ];
-
-    notes.forEach((frequency, index) => {
-
-      const t =
-        this.ctx.currentTime +
-        index * 0.15;
-
-      const osc =
-        this.ctx.createOscillator();
-
-      const gain =
-        this.ctx.createGain();
-
-      osc.type = 'triangle';
-
-      osc.frequency.value =
-        frequency;
-
-      gain.gain.setValueAtTime(
-        0.0001,
-        t
-      );
-
-      gain.gain.exponentialRampToValueAtTime(
-        0.25,
-        t + 0.05
-      );
-
-      gain.gain.exponentialRampToValueAtTime(
-        0.0001,
-        t + 0.60
-      );
-
-      osc.connect(gain);
-      gain.connect(this.master);
-
-      osc.start(t);
-
-      osc.stop(
-        t + 0.65
-      );
-    });
+  for(let i = 0; i < size; i++){
+    data[i] = (Math.random() * 2 - 1) * (1 - i / size);
   }
 
+  const noise = this.ctx.createBufferSource();
+  noise.buffer = buf;
+
+  const filter = this.ctx.createBiquadFilter();
+  filter.type = 'highpass';
+  filter.frequency.value = 900;
+
+  const noiseGain = this.ctx.createGain();
+  noiseGain.gain.setValueAtTime(0.7, t);
+  noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.32);
+
+  noise.connect(filter);
+  filter.connect(noiseGain);
+  noiseGain.connect(this.master);
+
+  noise.start(t);
+  noise.stop(t + 0.33);
+},
+
+  playHeartbeat(){
+    this.init();
+    [0, 0.5, 1.4, 1.9, 2.8, 3.3].forEach(delay => {
+      const t = this.ctx.currentTime + delay;
+      const o = this.ctx.createOscillator(); o.type = 'sine'; o.frequency.value = 52;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.4, t + 0.05);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+      o.connect(g); g.connect(this.master); o.start(t); o.stop(t + 0.35);
+    });
+  },
+  playFanfare(){
+    this.init();
+    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+      const t = this.ctx.currentTime + i * 0.15;
+      const o = this.ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = f;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.22, t + 0.05);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+      o.connect(g); g.connect(this.master); o.start(t); o.stop(t + 0.65);
+    });
+  }
 };
 
-document.addEventListener('visibilitychange', () => {
+document.addEventListener('pointerdown', () => {
+  Sound.unlock();
+}, { once: true });
 
-  if (
-    !document.hidden &&
-    Sound.ctx &&
-    Sound.ctx.state === 'suspended'
-  ) {
-    Sound.resume();
-  }
 
+document.getElementById('sound-toggle').addEventListener('click', (e) => {
+  Sound.init();
+  Sound.setMuted(!Sound.muted);
+  e.currentTarget.textContent = Sound.muted ? '🔇' : '🔈';
 });
-
-
-document.getElementById('sound-toggle')
-  .addEventListener('click', async (e) => {
-
-    const button = e.currentTarget;
-
-    if (!Sound.ctx) {
-
-      const unlocked =
-        await Sound.unlock();
-    
-      if (unlocked) {
-        Sound.setMuted(false);
-        button.textContent = '🔈';
-      }
-
-      return;
-    }
-
-    await Sound.resume();
-
-    Sound.setMuted(
-      !Sound.muted
-    );
-
-    button.textContent =
-      Sound.muted
-        ? '🔇'
-        : '🔈';
-
-  });
-
 
 (function buildSky(){
   const sky = document.getElementById('sky');
@@ -1951,41 +1516,20 @@ const startBtn = document.getElementById('start-btn');
 
 nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !startBtn.disabled) startBtn.click(); });
 
-startBtn.addEventListener('click', async () => {
-
-  const typedName =
-    nameInput.value.trim();
+startBtn.addEventListener('click', () => {
+  const typedName = nameInput.value.trim();
 
   if (!typedName) {
     nameInput.focus();
     return;
   }
 
-  const audioOK =
-    await Sound.unlock();
-
-  console.log(
-    'Áudio liberado:',
-    audioOK
-  );
-
-  if (Sound.ctx) {
-    console.log(
-      'Estado:',
-      Sound.ctx.state
-    );
-  }
-
   visitorName = typedName;
 
-  document.getElementById('greet-name')
-    .textContent = visitorName;
+  document.getElementById('greet-name').textContent = visitorName;
 
   showScreen('screen-greeting');
-
 });
-
-
 
 let answers = [];
 let qCurrent = 0;
@@ -2178,12 +1722,16 @@ document.getElementById('screen-balloons').addEventListener('click', function(e)
   Sound.playWrongPop();
 });
 
-function popBalloon(el) {
+function popBalloon(el){
+  const rect = el.getBoundingClientRect();
 
-  const rect =
-    el.getBoundingClientRect();
+  // Garante que o áudio seja iniciado no primeiro toque
+  Sound.init();
 
-  // O áudio já foi desbloqueado anteriormente.
+  if (Sound.ctx && Sound.ctx.state === 'suspended') {
+    Sound.ctx.resume();
+  }
+
   Sound.playPop();
 
   el.classList.add('pop');
@@ -2193,23 +1741,13 @@ function popBalloon(el) {
     rect.top + rect.height / 2
   );
 
-  setTimeout(() => {
-    el.remove();
-  }, 260);
+  setTimeout(() => el.remove(), 260);
 
   poppedCount++;
 
-  if (
-    poppedCount >= REQUIRED_POPS &&
-    !secretRevealed
-  ) {
-
+  if (poppedCount >= REQUIRED_POPS && !secretRevealed) {
     secretRevealed = true;
-
-    setTimeout(
-      runHeartbeatSequence,
-      500
-    );
+    setTimeout(runHeartbeatSequence, 500);
   }
 }
 
@@ -2428,25 +1966,7 @@ document.getElementById('easter-logo').addEventListener('click', () => {
   }
 });
 
-document.getElementById('greeting-continue')
-  .addEventListener('click', async () => {
 
-    await Sound.unlock();
-
-    document
-      .getElementById('screen-greeting')
-      .classList.remove('active');
-
-    document
-      .getElementById('screen-quiz')
-      .classList.add('active');
-
-    buildProgress();
-    renderQuestion(0);
-
-  });
-
-  
 </script>
 
 </body>
