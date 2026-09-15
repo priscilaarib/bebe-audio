@@ -415,7 +415,7 @@ p{ margin: 0; }
 }
 
 
-.balloon-field{ position: fixed; inset: 0; z-index: 2; pointer-events: none; }
+.balloon-field{ position: fixed; inset: 0; z-index: 2; pointer-events: none; overflow: visible;}
 .floaty{
   position: absolute;
   bottom: -18%;
@@ -1789,6 +1789,8 @@ document.getElementById('next-btn').addEventListener('click', () => {
 let poppedCount = 0;
 const REQUIRED_POPS = 7;
 let secretRevealed = false;
+let heartbeatStarted = false;
+
 
 function buildBalloonField(){
   poppedCount = 0; secretRevealed = false;
@@ -1841,9 +1843,11 @@ document.getElementById('screen-balloons').addEventListener('click', function(e)
 });
 
 function popBalloon(el){
+
+  if (!el || el.classList.contains('pop')) return;
+
   const rect = el.getBoundingClientRect();
 
-  // Garante que o áudio seja iniciado no primeiro toque
   Sound.init();
 
   if (Sound.ctx && Sound.ctx.state === 'suspended') {
@@ -1859,35 +1863,95 @@ function popBalloon(el){
     rect.top + rect.height / 2
   );
 
-  setTimeout(() => el.remove(), 260);
+  setTimeout(() => {
+    if (el && el.parentNode) {
+      el.remove();
+    }
+  }, 260);
 
   poppedCount++;
 
-  if (poppedCount >= REQUIRED_POPS && !secretRevealed) {
-    secretRevealed = true;
-    setTimeout(runHeartbeatSequence, 500);
+  console.log('Balões estourados:', poppedCount);
+
+  // Quando chegar a 7, inicia a sequência
+  if (
+    poppedCount >= REQUIRED_POPS &&
+    !heartbeatStarted
+  ) {
+
+    heartbeatStarted = true;
+
+    console.log('7 balões encontrados! Iniciando revelação...');
+
+    setTimeout(() => {
+      runHeartbeatSequence();
+    }, 500);
   }
 }
 
 
+
 function runHeartbeatSequence(){
-  document.getElementById('balloon-eyebrow').textContent = 'quase lá';
 
-  document.getElementById('balloon-title').textContent = '✨ Você encontrou!';
+  const darken = document.getElementById('darken');
+  const heartbeatMsg = document.getElementById('heartbeat-msg');
+  const heartbeatLine = document.getElementById('heartbeat-line');
+  const golden = document.getElementById('golden-balloon');
 
-  document.getElementById('balloon-sub').textContent = 'Agora falta só mais um…';
+  // Atualiza o texto
+  document.getElementById('balloon-eyebrow').textContent =
+    'quase lá';
 
-  document.querySelectorAll('.floaty').forEach(b => { if (!b.classList.contains('pop')) { b.classList.add('pop'); setTimeout(()=>b.remove(), 260); } });
-  document.getElementById('darken').classList.add('show');
+  document.getElementById('balloon-title').textContent =
+    '✨ Você encontrou!';
+
+  document.getElementById('balloon-sub').textContent =
+    'Agora falta só mais um…';
+
+  // Faz os balões restantes desaparecerem
+  document.querySelectorAll('.floaty').forEach(b => {
+
+    if (!b.classList.contains('pop')) {
+
+      b.classList.add('pop');
+
+      setTimeout(() => {
+        if (b.parentNode) b.remove();
+      }, 260);
+
+    }
+
+  });
+
+  // Escurece a tela
+  darken.classList.add('show');
+
+  // Som do coração
   Sound.playHeartbeat();
-  setTimeout(() => { document.getElementById('heartbeat-msg').classList.add('show'); }, 500);
-  setTimeout(() => { document.getElementById('heartbeat-line').classList.add('show'); }, 1600);
+
+  // Mostra mensagem
   setTimeout(() => {
-    document.getElementById('heartbeat-msg').classList.remove('show');
-    document.getElementById('darken').classList.remove('show');
-    document.getElementById('golden-balloon').classList.add('show');
+    heartbeatMsg.classList.add('show');
+  }, 500);
+
+  setTimeout(() => {
+    heartbeatLine.classList.add('show');
+  }, 1600);
+
+  // Esconde a mensagem e mostra o balão dourado
+  setTimeout(() => {
+
+    heartbeatMsg.classList.remove('show');
+    heartbeatLine.classList.remove('show');
+    darken.classList.remove('show');
+
+    if (golden) {
+      golden.classList.add('show');
+    }
+
   }, 4200);
 }
+
 
 function triggerFinale(){
 
