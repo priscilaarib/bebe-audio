@@ -1399,6 +1399,9 @@ const QUESTIONS = [
   { text: "Quem vai dizer mais 'não pode'? 😂", options: ["Mamãe", "Papai", "Aylinha"], fact: " Entre tantos 'não pode', sempre vai existir alguém dizendo 'deixa, só dessa vez'. 😏" },
 ];
 
+const reducedMotion =
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  
 const Sound = {
   ctx: null, master: null, playing: false, muted: false, oscs: [],
 
@@ -1416,6 +1419,7 @@ const Sound = {
     }
   },
 
+  
   unlock(){
     this.init();
 
@@ -2117,25 +2121,11 @@ function triggerFinale(){
 }
 
 
-document.getElementById('secret-icon').addEventListener('click', () => {
-  const popup = document.getElementById('secret-popup');
-  const icon = document.getElementById('secret-icon');
-
-  icon.classList.remove('attention');
-
-  popup.classList.remove('sucking');
-  popup.classList.add('show');
-});
-
-
-document.getElementById('replay-btn').addEventListener('click', () => window.location.reload());
-
 const fxCanvas = document.getElementById('fx-canvas');
 const fxCtx = fxCanvas.getContext('2d');
 function resizeCanvas(){ fxCanvas.width = window.innerWidth; fxCanvas.height = window.innerHeight; }
 resizeCanvas(); window.addEventListener('resize', resizeCanvas);
 
-const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* Loop global único: todos os efeitos (confete, fogos, faíscas) desenham
    no mesmo frame, para não se apagarem uns aos outros. */
