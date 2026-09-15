@@ -1125,7 +1125,16 @@ body.theme-girl .finale-word{ color: #F2B6CE; text-shadow: 0 0 40px rgba(232,160
     opacity: 0;
   }
 }
+/* botão do vídeo */
+.video-reveal-btn{
+  display: inline-block;
+  text-decoration: none;
+  margin-top: 10px;
+}
 
+.video-reveal-btn:hover{
+  text-decoration: none;
+}
 
 </style>
 </head>
@@ -1245,8 +1254,25 @@ body.theme-girl .finale-word{ color: #F2B6CE; text-shadow: 0 0 40px rgba(232,160
 
   <section class="screen" id="screen-finale">
     <p class="sub" id="finale-thanks" style="font-size:19px; max-width:34ch;">Obrigado(a), <span class="script" id="finale-name" style="font-size:28px;">amigo(a)</span>, por fazer parte da nossa história.</p>
-    <div class="finale-word" id="finale-word">É menino!</div>
-    <p class="sub" id="finale-sub">Mal podemos esperar pra conhecer você. 💙</p>
+    ```html
+<div class="finale-word" id="finale-word">
+  Chegou a hora… ✨
+</div>
+
+<p class="sub" id="finale-sub">
+  Preparamos uma surpresa muito especial para você. 💕
+</p>
+
+<a
+  href="https://drive.google.com/file/d/1VYMYehMXqbfmbNslDANW26aaoGNhjeQ1/view?usp=sharing"
+  target="_blank"
+  rel="noopener noreferrer"
+  class="btn-primary video-reveal-btn"
+>
+  🎬 Assistir à revelação
+</a>
+```
+
     <button class="replay-btn" id="replay-btn">Jogar novamente</button>
 
     <button class="secret-icon" id="secret-icon" aria-label="Ver novamente a mensagem importante">
@@ -1784,10 +1810,11 @@ function triggerFinale(){
     document.getElementById('finale-name').textContent = visitorName;
     const isBoy = CONFIG.babyGender === 'menino';
     document.body.classList.add(isBoy ? 'theme-boy' : 'theme-girl');
-    document.getElementById('finale-word').textContent = isBoy ? 'É menino!' : 'É menina!';
-    document.getElementById('finale-sub').textContent = isBoy
-      ? 'Mal podemos esperar pra conhecer você. 💙'
-      : 'Mal podemos esperar pra conhecer você. 💗';
+    document.getElementById('finale-word').textContent =
+  'Chegou a hora… ✨';
+
+document.getElementById('finale-sub').textContent =
+  'Preparamos uma surpresa muito especial para você. 💕';
     showScreen('screen-finale');
     burstConfetti(isBoy);
     burstFireworks(isBoy);
