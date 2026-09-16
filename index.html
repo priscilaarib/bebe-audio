@@ -1368,7 +1368,6 @@ p{ margin: 0; }
     <div class="balloon-field" id="balloon-field"></div>
   </section>
 
-  ```html
 <section class="screen" id="screen-finale">
 
   <div id="finale-thanks">
@@ -1947,9 +1946,6 @@ function triggerFinale(){
 
 const isBoy = CONFIG.babyGender === 'menino';
 
-document.body.classList.add(
-  isBoy ? 'theme-boy' : 'theme-girl'
-);
 
 
 // Texto da pegadinha
@@ -1975,9 +1971,9 @@ showScreen('screen-finale');
       document.getElementById('secret-icon').classList.add('attention');
     }, 750);
 
-  }, 8000);
+  }, 9000);
 
-}, 4000);
+},20000);
 
 }
 
