@@ -668,20 +668,19 @@ p{ margin: 0; }
   line-height: 1; margin: 6px 0 10px; opacity: 0; transform: scale(0.7);
   animation: pop-in 0.8s cubic-bezier(.34,1.56,.64,1) forwards; animation-delay: 0.2s;
 }
-  .guess-boy {
-  color: #4a90e2;
-}
 
-.guess-girl {
-  color: #e78bb5;
-}
 
 #finale-thanks{
   transform: translateY(-25px);
 }
-body.theme-boy .finale-word:not(#finale-guess){ color: #A9D4F5; text-shadow: 0 0 40px rgba(111,168,220,0.8); }
+  .finale-sub {
+  font-size: 21px;
+  margin-top: 35px;
+}
 
-body.theme-girl .finale-word:not(#finale-guess){ color: #F2B6CE; text-shadow: 0 0 40px rgba(232,160,191,0.8); }
+#finale-prank {
+  color: #7b5ea7;
+}
 
 @keyframes pop-in{ to{ opacity: 1; transform: scale(1); } }
 
@@ -1260,15 +1259,13 @@ body.theme-girl .finale-word:not(#finale-guess){ color: #F2B6CE; text-shadow: 0 
     lembra do seu palpite? 👀
   </p>
 
-  <div class="finale-word" id="finale-guess">É menino! 💙</div>
-
-  <p class="sub" id="finale-sub">
-    Então chegou a hora de descobrir se você acertou…
-  </p>
-
   <div class="finale-word" id="finale-prank">
-    TE PEGUEI! 😂
-  </div>
+  TE PEGUEI! 😂
+</div>
+
+<p class="finale-sub" id="finale-sub">
+  <span id="finale-name"></span>, lembra do seu palpite? 👀
+</p>
 
   <p class="sub">
     Achou que a gente ia revelar por aqui? 🤭<br>
@@ -1836,17 +1833,6 @@ document.body.classList.add(
   isBoy ? 'theme-boy' : 'theme-girl'
 );
 
-// Mostra o palpite que a pessoa deu na primeira pergunta
-const finaleGuess = document.getElementById('finale-guess');
-finaleGuess.textContent = firstGuess;
-
-finaleGuess.classList.remove('guess-boy', 'guess-girl');
-
-if (firstGuess.toLowerCase().includes('menino')) {
-  finaleGuess.classList.add('guess-boy');
-} else {
-  finaleGuess.classList.add('guess-girl');
-}
 
 // Texto da pegadinha
 document.getElementById('finale-prank').textContent = 'TE PEGUEI! 😂';
