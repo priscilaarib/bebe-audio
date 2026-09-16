@@ -668,11 +668,21 @@ p{ margin: 0; }
   line-height: 1; margin: 6px 0 10px; opacity: 0; transform: scale(0.7);
   animation: pop-in 0.8s cubic-bezier(.34,1.56,.64,1) forwards; animation-delay: 0.2s;
 }
+  .guess-boy {
+  color: #4a90e2;
+}
+
+.guess-girl {
+  color: #e78bb5;
+}
+
 #finale-thanks{
   transform: translateY(-25px);
 }
-body.theme-boy .finale-word{ color: #A9D4F5;; text-shadow: 0 0 40px rgba(111,168,220,0.8); }
-body.theme-girl .finale-word{ color: #F2B6CE; text-shadow: 0 0 40px rgba(232,160,191,0.8); }
+body.theme-boy .finale-word:not(#finale-guess){ color: #A9D4F5; text-shadow: 0 0 40px rgba(111,168,220,0.8); }
+
+body.theme-girl .finale-word:not(#finale-guess){ color: #F2B6CE; text-shadow: 0 0 40px rgba(232,160,191,0.8); }
+
 @keyframes pop-in{ to{ opacity: 1; transform: scale(1); } }
 
 #toast{
@@ -1244,10 +1254,41 @@ body.theme-girl .finale-word{ color: #F2B6CE; text-shadow: 0 0 40px rgba(232,160
   </section>
 
   <section class="screen" id="screen-finale">
-    <p class="sub" id="finale-thanks" style="font-size:19px; max-width:34ch;">Obrigado(a), <span class="script" id="finale-name" style="font-size:28px;">amigo(a)</span>, por fazer parte da nossa história.</p>
-    <div class="finale-word" id="finale-word">É menino!</div>
-    <p class="sub" id="finale-sub">Mal podemos esperar pra conhecer você. 💙</p>
-    <button class="replay-btn" id="replay-btn">Jogar novamente</button>
+    <div id="finale-thanks">
+  <p class="sub" style="font-size:19px; max-width:34ch;">
+    <span class="script" id="finale-name" style="font-size:28px;">amigo(a)</span>,
+    lembra do seu palpite? 👀
+  </p>
+
+  <div class="finale-word" id="finale-guess">É menino! 💙</div>
+
+  <p class="sub" id="finale-sub">
+    Então chegou a hora de descobrir se você acertou…
+  </p>
+
+  <div class="finale-word" id="finale-prank">
+    TE PEGUEI! 😂
+  </div>
+
+  <p class="sub">
+    Achou que a gente ia revelar por aqui? 🤭<br>
+    A revelação de verdade está no WhatsApp.
+  </p>
+
+  <p class="sub" style="font-size:15px;">
+    Agora é só mandar seu palpite para quem te enviou esse convite. 💬
+  </p>
+
+  <button class="btn-primary" id="copy-guess-btn" type="button">
+    📋 Copiar meu palpite
+  </button>
+
+  <p id="copy-feedback" style="margin-top:12px; font-size:13px; opacity:0;">
+    ✓ Palpite copiado! Agora é só colar no WhatsApp. 😉
+  </p>
+</div>
+
+<button class="replay-btn" id="replay-btn">Jogar novamente</button>
 
     <button class="secret-icon" id="secret-icon" aria-label="Ver novamente a mensagem importante">
      !
@@ -1533,6 +1574,8 @@ startBtn.addEventListener('click', () => {
 
 let answers = [];
 let qCurrent = 0;
+let firstGuess = '';
+  
 function buildProgress(){
   const track = document.getElementById('progress-track');
   track.innerHTML = '';
@@ -1605,6 +1648,10 @@ function renderQuestion(i){
 
       // Salva a resposta escolhida
       answers[i] = optionIndex;
+      if (i === 0) {
+        firstGuess = q.options[optionIndex];
+      }
+
 
       // Mostra o fact
       fact.textContent = q.fact;
@@ -1782,13 +1829,30 @@ function triggerFinale(){
 
   setTimeout(() => {
     document.getElementById('finale-name').textContent = visitorName;
-    const isBoy = CONFIG.babyGender === 'menino';
-    document.body.classList.add(isBoy ? 'theme-boy' : 'theme-girl');
-    document.getElementById('finale-word').textContent = isBoy ? 'É menino!' : 'É menina!';
-    document.getElementById('finale-sub').textContent = isBoy
-      ? 'Mal podemos esperar pra conhecer você. 💙'
-      : 'Mal podemos esperar pra conhecer você. 💗';
-    showScreen('screen-finale');
+
+const isBoy = CONFIG.babyGender === 'menino';
+
+document.body.classList.add(
+  isBoy ? 'theme-boy' : 'theme-girl'
+);
+
+// Mostra o palpite que a pessoa deu na primeira pergunta
+const finaleGuess = document.getElementById('finale-guess');
+finaleGuess.textContent = firstGuess;
+
+finaleGuess.classList.remove('guess-boy', 'guess-girl');
+
+if (firstGuess.toLowerCase().includes('menino')) {
+  finaleGuess.classList.add('guess-boy');
+} else {
+  finaleGuess.classList.add('guess-girl');
+}
+
+// Texto da pegadinha
+document.getElementById('finale-prank').textContent = 'TE PEGUEI! 😂';
+
+showScreen('screen-finale');
+
     burstConfetti(isBoy);
     burstFireworks(isBoy);
   }, 350);
@@ -1964,6 +2028,26 @@ document.getElementById('easter-logo').addEventListener('click', () => {
       easterLocked = false;
     }, 3200);
   }
+});
+
+  document.getElementById('copy-guess-btn').addEventListener('click', async () => {
+
+  const text = firstGuess;
+
+  try {
+    await navigator.clipboard.writeText(text);
+
+    const feedback = document.getElementById('copy-feedback');
+    feedback.style.opacity = '1';
+
+    setTimeout(() => {
+      feedback.style.opacity = '0';
+    }, 3000);
+
+  } catch (err) {
+    showToast('Selecione e copie seu palpite manualmente 😉');
+  }
+
 });
 
 
